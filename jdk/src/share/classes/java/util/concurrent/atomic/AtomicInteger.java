@@ -50,6 +50,8 @@ import sun.misc.Unsafe;
  *
  * @since 1.5
  * @author Doug Lea
+ *
+ * 原子更新整型
 */
 public class AtomicInteger extends Number implements java.io.Serializable {
     private static final long serialVersionUID = 6214790243416807050L;
@@ -60,6 +62,13 @@ public class AtomicInteger extends Number implements java.io.Serializable {
 
     static {
         try {
+            /**
+             * CAS 应用：
+             *     静态变量 valueOffset，即为字段 value 的内存偏移量，valueOffset 的值在 AtomicInteger 初始化时，
+             * 在静态代码块中通过 Unsafe 的 objectFieldOffset 方法获取。在 AtomicInteger 中提供线程安全方法中，
+             * 通过字段 valueOffset 的值可以定位到 AtomicInteger 对象中的 value 的内存地址，从而可以根据 CAS 实现
+             * 对 value 字段的院子操作。
+             */
             valueOffset = unsafe.objectFieldOffset
                 (AtomicInteger.class.getDeclaredField("value"));
         } catch (Exception ex) { throw new Error(ex); }
@@ -103,6 +112,8 @@ public class AtomicInteger extends Number implements java.io.Serializable {
     /**
      * Eventually sets to the given value.
      *
+     * 最终设置成 newValue，使用 lazySet 设置值后，可能会导致其他线程之后的一小段时间内还是可以读取到旧的值。
+     *
      * @param newValue the new value
      * @since 1.6
      */
@@ -112,6 +123,8 @@ public class AtomicInteger extends Number implements java.io.Serializable {
 
     /**
      * Atomically sets to the given value and returns the old value.
+     *
+     * 以原子的方式设置为 newValue 的值，并返回旧值。
      *
      * @param newValue the new value
      * @return the previous value
@@ -123,6 +136,8 @@ public class AtomicInteger extends Number implements java.io.Serializable {
     /**
      * Atomically sets the value to the given updated value
      * if the current value {@code ==} the expected value.
+     *
+     * 如果输入的数值等于预期值，则以原子方式将该值设置为输入的值。
      *
      * @param expect the expected value
      * @param update the new value
@@ -151,6 +166,8 @@ public class AtomicInteger extends Number implements java.io.Serializable {
 
     /**
      * Atomically increments by one the current value.
+     *
+     * 以原子的方式将当前值 +1，注：这里返回的是自增前的值
      *
      * @return the previous value
      */
@@ -198,6 +215,7 @@ public class AtomicInteger extends Number implements java.io.Serializable {
     /**
      * Atomically adds the given value to the current value.
      *
+     * 以原子的方式将输入的数值与实例的数值（AtomicInteger 的 value）相加，并返回结果
      * @param delta the value to add
      * @return the updated value
      */

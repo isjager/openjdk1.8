@@ -135,6 +135,18 @@ import java.util.concurrent.locks.ReentrantLock;
  * @see CountDownLatch
  *
  * @author Doug Lea
+ *
+ * CyclicBarrier 栅栏屏障，让一组线程到达一个屏障（也可以叫同步点）时被阻塞，直到最后
+ * 一个线程到达屏障时，屏障才会开门，所有被屏障拦截的线程才会继续执行。
+ *
+ * 应用场景：
+ *    可用于多线程计算数据，最后合并计算结果。
+ *
+ * 例如：
+ *    用一个 Excel 保存了用户所有银行流水，每个Sheet保存一个账户近一年的每笔银行流水，
+ * 现在需要统计用户的日均银行流水，先用多线程处理每个sheet里的银行流水，都执行完之后，
+ * 得到每个 sheet 的日均银行流水，最后，再用 barrierAction 用这些线程的计算结果，
+ * 计算出整个 Excel 的日均银行流水。
  */
 public class CyclicBarrier {
     /**
@@ -289,6 +301,9 @@ public class CyclicBarrier {
      * @param parties the number of threads that must invoke {@link #await}
      *        before the barrier is tripped
      * @throws IllegalArgumentException if {@code parties} is less than 1
+     *
+     * CyclicBarrier(int parties) 默认构造方法，parties 参数表示屏障拦截的线程数量，
+     * 每个线程调用 await() 方法告知 CyclicBarrier 我已经到达屏障，然后当前线程被阻塞。
      */
     public CyclicBarrier(int parties) {
         this(parties, null);
@@ -356,6 +371,8 @@ public class CyclicBarrier {
      *         waiting, or the barrier was reset, or the barrier was
      *         broken when {@code await} was called, or the barrier
      *         action (if present) failed due to an exception
+     *
+     * 每个线程调用 await() 方法告知 CyclicBarrier 我已经到达屏障，然后当前线程被阻塞。
      */
     public int await() throws InterruptedException, BrokenBarrierException {
         try {

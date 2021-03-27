@@ -221,6 +221,8 @@ public interface BlockingQueue<E> extends Queue<E> {
      * Inserts the specified element into this queue, waiting if necessary
      * for space to become available.
      *
+     * 将指定的元素插入此队列，若没有空间会阻塞，等待可用空间（具体由子类实现）
+     *
      * @param e the element to add
      * @throws InterruptedException if interrupted while waiting
      * @throws ClassCastException if the class of the specified element

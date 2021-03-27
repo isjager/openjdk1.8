@@ -152,6 +152,9 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer;
  *
  * @since 1.5
  * @author Doug Lea
+ *
+ * Semaphore 是一个计数信号量，它的作用是控制访问特定资源的线程数目，
+ * 底层依赖 AQS 的状态 State，是在生产当中比较常用的一个工具类
  */
 public class Semaphore implements java.io.Serializable {
     private static final long serialVersionUID = -3222578661600680210L;
@@ -257,9 +260,13 @@ public class Semaphore implements java.io.Serializable {
      * Creates a {@code Semaphore} with the given number of
      * permits and nonfair fairness setting.
      *
+     * 创建一个给定数量的非公平的线程许可证
+     *
      * @param permits the initial number of permits available.
      *        This value may be negative, in which case releases
      *        must occur before any acquires will be granted.
+     *
+     * permits：初始化线程许可证数量
      */
     public Semaphore(int permits) {
         sync = new NonfairSync(permits);
@@ -269,12 +276,17 @@ public class Semaphore implements java.io.Serializable {
      * Creates a {@code Semaphore} with the given number of
      * permits and the given fairness setting.
      *
+     * 创建一个给定数量的公平的线程许可证
+     *
      * @param permits the initial number of permits available.
      *        This value may be negative, in which case releases
      *        must occur before any acquires will be granted.
      * @param fair {@code true} if this semaphore will guarantee
      *        first-in first-out granting of permits under contention,
      *        else {@code false}
+     *
+     * permits：初始化线程许可证数量
+     * fair：为 true 的话，创建一个公平线程许可证
      */
     public Semaphore(int permits, boolean fair) {
         sync = fair ? new FairSync(permits) : new NonfairSync(permits);
@@ -307,6 +319,8 @@ public class Semaphore implements java.io.Serializable {
      * interrupted status is cleared.
      *
      * @throws InterruptedException if the current thread is interrupted
+     *
+     * 表示阻塞并获取许可证，直到一个可用许可或线程被中断
      */
     public void acquire() throws InterruptedException {
         sync.acquireSharedInterruptibly(1);
@@ -603,6 +617,8 @@ public class Semaphore implements java.io.Serializable {
      *
      * @param permits the number of permits to release
      * @throws IllegalArgumentException if {@code permits} is negative
+     *
+     * 释放许可证
      */
     public void release(int permits) {
         if (permits < 0) throw new IllegalArgumentException();

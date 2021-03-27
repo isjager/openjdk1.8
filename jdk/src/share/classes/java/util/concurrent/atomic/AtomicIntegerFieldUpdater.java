@@ -62,6 +62,8 @@ import sun.reflect.Reflection;
  * @since 1.5
  * @author Doug Lea
  * @param <T> The type of the object holding the updatable field
+ *
+ * 原子更新整型的字段的更新器。
  */
 public abstract class AtomicIntegerFieldUpdater<T> {
     /**
@@ -177,6 +179,8 @@ public abstract class AtomicIntegerFieldUpdater<T> {
     /**
      * Atomically increments by one the current value of the field of the
      * given object managed by this updater.
+     *
+     * 以原子方式将当前字段的当前值 +1，返回 +1 前的值。
      *
      * @param obj An object whose field to get and set
      * @return the previous value

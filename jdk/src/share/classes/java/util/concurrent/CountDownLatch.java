@@ -152,6 +152,13 @@ import java.util.concurrent.locks.AbstractQueuedSynchronizer;
  *
  * @since 1.5
  * @author Doug Lea
+ *
+ * CountDownLatch 是一个同步辅助类，能够使一个或多个线程等待，直到其他线程完成各自工作再执行。
+ * 例如：
+ *   应用程序的主线程希望在负责启动框架服务的线程已经启动所有的框架服务之后再执行。
+ *
+ * 使用场景：
+ *   Zookeeper 分布式锁，Jmeter 模拟高并发等
  */
 public class CountDownLatch {
     /**
@@ -226,6 +233,8 @@ public class CountDownLatch {
      *
      * @throws InterruptedException if the current thread is interrupted
      *         while waiting
+     *
+     * 使当前线程等待，直到门锁递减计数到 0，除非线程中断
      */
     public void await() throws InterruptedException {
         sync.acquireSharedInterruptibly(1);
@@ -286,6 +295,10 @@ public class CountDownLatch {
      * thread scheduling purposes.
      *
      * <p>If the current count equals zero then nothing happens.
+     *
+     * CountDownLatch 是通过一个计数器来实现的，计数器的初始值为线程的数量，每当一个线程
+     * 完成了自己的任务后，计数器的值就会减 1。当计数器的值到达 0 时，它表示所有的线程已经
+     * 完成了任务，然后在闭锁上等待的线程就可以恢复执行任务。
      */
     public void countDown() {
         sync.releaseShared(1);

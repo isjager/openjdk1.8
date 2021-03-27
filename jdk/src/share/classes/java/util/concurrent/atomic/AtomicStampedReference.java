@@ -46,6 +46,9 @@ package java.util.concurrent.atomic;
  * @since 1.5
  * @author Doug Lea
  * @param <V> The type of object referred to by this reference
+ *
+ * 原子更新带有版本号的引用类型。该类型将整数值与引用关联起来，可用于原子的更新数据和数据版本号，可以
+ * 解决使用 CAS 进行原子更新时，可能出现 ABA 问题。
  */
 public class AtomicStampedReference<V> {
 
@@ -67,8 +70,8 @@ public class AtomicStampedReference<V> {
      * Creates a new {@code AtomicStampedReference} with the given
      * initial values.
      *
-     * @param initialRef the initial reference
-     * @param initialStamp the initial stamp
+     * @param initialRef the initial reference 要修改的初始值
+     * @param initialStamp the initial stamp   初始化版本号
      */
     public AtomicStampedReference(V initialRef, int initialStamp) {
         pair = Pair.of(initialRef, initialStamp);
@@ -85,6 +88,8 @@ public class AtomicStampedReference<V> {
 
     /**
      * Returns the current value of the stamp.
+     *
+     * 获取当前标识别
      *
      * @return the current value of the stamp
      */
@@ -136,10 +141,10 @@ public class AtomicStampedReference<V> {
      * current reference is {@code ==} to the expected reference
      * and the current stamp is equal to the expected stamp.
      *
-     * @param expectedReference the expected value of the reference
-     * @param newReference the new value for the reference
-     * @param expectedStamp the expected value of the stamp
-     * @param newStamp the new value for the stamp
+     * @param expectedReference the expected value of the reference 参考的期望值
+     * @param newReference the new value for the reference          供参考的新值
+     * @param expectedStamp the expected value of the stamp         标识的期望值
+     * @param newStamp the new value for the stamp                  标识的新值
      * @return {@code true} if successful
      */
     public boolean compareAndSet(V   expectedReference,

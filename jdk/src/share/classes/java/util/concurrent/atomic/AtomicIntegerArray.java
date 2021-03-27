@@ -45,6 +45,8 @@ import sun.misc.Unsafe;
  * variables.
  * @since 1.5
  * @author Doug Lea
+ *
+ * 原子更新整型数组里的元素
  */
 public class AtomicIntegerArray implements java.io.Serializable {
     private static final long serialVersionUID = 2862133569453604235L;
@@ -154,6 +156,8 @@ public class AtomicIntegerArray implements java.io.Serializable {
      * Atomically sets the element at position {@code i} to the given
      * updated value if the current value {@code ==} the expected value.
      *
+     * 如果当前值等于预期值，则以原子方式将数组位置 i 的元素设置成 update。
+     *
      * @param i the index
      * @param expect the expected value
      * @param update the new value
@@ -238,6 +242,8 @@ public class AtomicIntegerArray implements java.io.Serializable {
 
     /**
      * Atomically adds the given value to the element at index {@code i}.
+     *
+     * 以原子方式将输入值与数组中的索引 i 的元素相加
      *
      * @param i the index
      * @param delta the value to add

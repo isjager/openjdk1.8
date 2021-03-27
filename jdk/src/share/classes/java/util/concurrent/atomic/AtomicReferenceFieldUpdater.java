@@ -80,6 +80,8 @@ import sun.reflect.Reflection;
  * @author Doug Lea
  * @param <T> The type of the object holding the updatable field
  * @param <V> The type of the field
+ *
+ * 原子更新引用类型里的字段
  */
 public abstract class AtomicReferenceFieldUpdater<T,V> {
 
@@ -179,6 +181,8 @@ public abstract class AtomicReferenceFieldUpdater<T,V> {
     /**
      * Atomically sets the field of the given object managed by this updater
      * to the given value and returns the old value.
+     *
+     * 以原子方式设置此更新程序管理的给定对象的字段为给定值，并返回旧值
      *
      * @param obj An object whose field to get and set
      * @param newValue the new value

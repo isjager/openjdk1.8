@@ -39,8 +39,56 @@ import sun.reflect.Reflection;
  *
  * @author John R. Rose
  * @see #getUnsafe
+ *
+ * Unsafe 主要提供了一些执行低级别、不安全操作的方法，如直接访问系统内存资源、自主管理内存资源等，
+ * 这些方法在提升 Java 运行效率、增强 Java 语言底层资源操作能力方面起到很大作用。
+ *
+ * 但由于 Unsafe 类使 Java 语言拥有了类似 C 语言指针一样操作内存空间的能力，这无疑也增加了程序发生
+ * 相关指针问题的风险。在程序中过度、不正确使用 Unsafe 类，会使得程序出错的概率变大，使 Java 这种安全
+ * 语言变得不再 ”安全“，因此对 Unsafe 的使用一定要慎重。
+ *
+ * Unsafe 功能介绍：
+ *   Unsafe 提供的 API 大致可分为内存操作、CAS、Class 相关、对象操作、线程调度、系统信息获取、
+ *   内存屏障、数组操作等。
+ *
+ * 一、内存操作：
+ *    allocateMemory()
+ *    reallocateMemory()
+ *    freeMemory()
+ *    setMemory()
+ *    copyMemory()
+ *    getObject()
+ *    putObject()
+ *    getByte()
+ *    putByte()
+ *    ......
+ *
+ * 通常，Java 中创建的对象都是处于堆内内存（heap）中，堆内内存是由 JVM 所管控的 Java 进程内存，并且它们遵循
+ * JVM 的内存管理机制，JVM 会采用垃圾回收机制统一管理堆内存。与之相对的是堆外内存，存在于 JVM 管控之外的内存
+ * 区域，Java 中对堆外内存的操作，依赖于 Unsafe 提供的操作堆外内存的 native 方法。
+ *
+ * 使用堆外内存的原因？
+ * 1、对垃圾回收停顿的改善。由于堆外内存是直接受操作系统管理而不是 JVM，所以当我们使用堆外内存时，即可保存较小的
+ *    堆内内存规模。从而在 GC 时减少回收停顿对于应用的影响。
+ * 2、提升程序 I/O 操作的性能。通常在 I/O 通信过程中，会存在堆内内存到堆外内存的数据拷贝操作，对于需要频繁进行
+ *    内存间数据拷贝且生命周期较短的暂存数据，都建议存储到堆外内存。
+ *
+ * 二、CAS 相关：
+ *   compareAndSwapObject()
+ *   compareAndSwapInt()
+ *   compareAndSwapLong()
+ *
+ * 三、线程调度：（包括线程挂起、恢复、锁机制等方法）
+ *   unpark()
+ *   park()
+ *   monitorEnter()
+ *   monitorExit()
+ *   tryMonitorEnter()
+ *
+ * Java 锁和同步器框架的核心类 AbstractQueuedSynchronizer，就是通过调用 LockSupport.park() 和
+ * LockSupport.unpark() 实现线程的阻塞和唤醒的，而 LockSupport 的 park、unpark 方法实际是调用
+ * Unsafe 的 park、unpark 方式来实现。
  */
-
 public final class Unsafe {
 
     private static native void registerNatives();
@@ -51,6 +99,7 @@ public final class Unsafe {
 
     private Unsafe() {}
 
+    // 单例对象
     private static final Unsafe theUnsafe = new Unsafe();
 
     /**
@@ -86,6 +135,9 @@ public final class Unsafe {
     @CallerSensitive
     public static Unsafe getUnsafe() {
         Class<?> caller = Reflection.getCallerClass();
+        /*
+         * 仅在引导类加载器 BootstrapClassLoader 加载时才合法，否则抛出 SecurityException 异常。
+         */
         if (!VM.isSystemDomainLoader(caller.getClassLoader()))
             throw new SecurityException("Unsafe");
         return theUnsafe;
@@ -178,6 +230,9 @@ public final class Unsafe {
     /**
      * Fetches a reference value from a given Java variable.
      * @see #getInt(Object, long)
+     *
+     * 从给定的 Java 变量中获取参考值 —— 忽略修饰限定符的访问限制，与此类似操作还有：
+     * getInt、getDouble、getLong、getChar 等
      */
     public native Object getObject(Object o, long offset);
 
@@ -190,6 +245,9 @@ public final class Unsafe {
      * other store barriers for that object (if the VM requires them)
      * are updated.
      * @see #putInt(Object, int, int)
+     *
+     * 将参考值存储到给定的 Java 变量中。—— 忽略修饰限定符的访问限制，与此类似操作还有：
+     * putInt、putDouble、putLong、putChar 等
      */
     public native void putObject(Object o, long offset, Object x);
 
@@ -199,7 +257,11 @@ public final class Unsafe {
     public native void    putBoolean(Object o, long offset, boolean x);
     /** @see #getInt(Object, long) */
     public native byte    getByte(Object o, long offset);
-    /** @see #putInt(Object, int, int) */
+    /**
+     * @see #putInt(Object, int, int)
+     *
+     * 为给定地址设置 byte 类型的值（当且仅当该内存地址为 allocateMemory 分配时，此方法结果才是确定的）
+     */
     public native void    putByte(Object o, long offset, byte x);
     /** @see #getInt(Object, long) */
     public native short   getShort(Object o, long offset);
@@ -477,6 +539,8 @@ public final class Unsafe {
      *
      * @see #getByte(long)
      * @see #putByte(long, byte)
+     *
+     * 分配内存 —— 分配给定大小的新本地内存块（以字节为单位），相当于 c++ 的 malloc 函数
      */
     public native long allocateMemory(long bytes);
 
@@ -496,6 +560,8 @@ public final class Unsafe {
      * @throws OutOfMemoryError if the allocation is refused by the system
      *
      * @see #allocateMemory
+     *
+     * 扩充内存 —— 将新的本地内存块调整为给定大小（以字节为单位）
      */
     public native long reallocateMemory(long address, long bytes);
 
@@ -515,6 +581,8 @@ public final class Unsafe {
      * the stores take place in units of 'int' or 'short'.
      *
      * @since 1.7
+     *
+     * 给定内存块设置值（通常是 0）
      */
     public native void setMemory(Object o, long offset, long bytes, byte value);
 
@@ -545,6 +613,8 @@ public final class Unsafe {
      * the transfer takes place in units of 'int' or 'short'.
      *
      * @since 1.7
+     *
+     * 内存拷贝 —— 将给定内存块中的所有字节设置为另一块的副本
      */
     public native void copyMemory(Object srcBase, long srcOffset,
                                   Object destBase, long destOffset,
@@ -566,6 +636,8 @@ public final class Unsafe {
      * this method may be null, in which case no action is taken.
      *
      * @see #allocateMemory
+     *
+     * 释放内存 —— 释放从 allocateMemory 或 reallocateMemory 获得的本地内存块
      */
     public native void freeMemory(long address);
 
@@ -845,12 +917,18 @@ public final class Unsafe {
     public native Object allocateInstance(Class<?> cls)
         throws InstantiationException;
 
-    /** Lock the object.  It must get unlocked via {@link #monitorExit}. */
+    /**
+     * Lock the object.  It must get unlocked via {@link #monitorExit}.
+     *
+     * 获得对象锁（可重入锁） —— 必须通过 monitorExit 解锁
+     */
     public native void monitorEnter(Object o);
 
     /**
      * Unlock the object.  It must have been locked via {@link
      * #monitorEnter}.
+     *
+     * 释放对象锁 —— 它必须已通过 monitorEnter 锁定
      */
     public native void monitorExit(Object o);
 
@@ -858,6 +936,8 @@ public final class Unsafe {
      * Tries to lock the object.  Returns true or false to indicate
      * whether the lock succeeded.  If it did, the object must be
      * unlocked via {@link #monitorExit}.
+     *
+     * 尝试获取对象锁
      */
     public native boolean tryMonitorEnter(Object o);
 
@@ -868,7 +948,15 @@ public final class Unsafe {
     /**
      * Atomically update Java variable to <tt>x</tt> if it is currently
      * holding <tt>expected</tt>.
+     *
+     * 如果当前期望持有 Java 变量，则将其以原子方式更新为 x
+     *
+     * @param o         包含要修改 field 对象
+     * @param offset    对象中某 field 的偏移量
+     * @param expected  期望值
+     * @param x         更新值
      * @return <tt>true</tt> if successful
+     *
      */
     public final native boolean compareAndSwapObject(Object o, long offset,
                                                      Object expected,
@@ -978,6 +1066,11 @@ public final class Unsafe {
      * so when calling from native code.
      * @param thread the thread to unpark.
      *
+     * 取消阻塞线程
+     *
+     * park()、unpark() 方法即可实现线程的挂起与恢复。
+     *
+     * unpark() 方法可以终止一个挂起的线程，使其恢复正常。
      */
     public native void unpark(Object thread);
 
@@ -991,6 +1084,12 @@ public final class Unsafe {
      * "reason"). Note: This operation is in the Unsafe class only
      * because <tt>unpark</tt> is, so it would be strange to place it
      * elsewhere.
+     *
+     * 阻塞当前线程
+     *
+     * park()、unpark() 方法即可实现线程的挂起与恢复。
+     *
+     * 将一个线程进行挂起是通过 park()方法实现的，调用 park() 方法后，线程将一直阻塞直到超时或者中断等条件出现；
      */
     public native void park(boolean isAbsolute, long time);
 
@@ -1114,6 +1213,9 @@ public final class Unsafe {
      * Ensures lack of reordering of loads before the fence
      * with loads or stores after the fence.
      * @since 1.8
+     *
+     * 内存屏障，禁止 load 操作重排序。屏障前的 load 操作不能被重排序到屏障后，
+     * 屏障后的 load 操作不能被重排序到屏障前。
      */
     public native void loadFence();
 
@@ -1121,6 +1223,9 @@ public final class Unsafe {
      * Ensures lack of reordering of stores before the fence
      * with loads or stores after the fence.
      * @since 1.8
+     *
+     * 内存屏障，禁止 store 操作重排序。屏障前的 store 操作不能被重排序到屏障后，
+     * 屏障后的 store 操作不能被重排序到屏障前
      */
     public native void storeFence();
 
@@ -1128,6 +1233,8 @@ public final class Unsafe {
      * Ensures lack of reordering of loads or stores before the fence
      * with loads or stores after the fence.
      * @since 1.8
+     *
+     * 内存屏障，禁止 load、store 操作重排序
      */
     public native void fullFence();
 

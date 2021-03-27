@@ -556,6 +556,9 @@ public class Exchanger<V> {
      * @return the object provided by the other thread
      * @throws InterruptedException if the current thread was
      *         interrupted while waiting
+     *
+     * 当一个线程运行到 exchange() 方法时会阻塞，另一个线程运行到 exchange() 时，二者交换数据，
+     * 然后执行后面的程序。
      */
     @SuppressWarnings("unchecked")
     public V exchange(V x) throws InterruptedException {

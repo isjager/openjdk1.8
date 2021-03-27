@@ -116,6 +116,10 @@ import sun.misc.Unsafe;
  *     LockSupport.unpark(waiters.peek());
  *   }
  * }}</pre>
+ *
+ * 基本的线程阻塞原语，用于创建锁和其他同步类。
+ *
+ * 原语：计算机进程的控制通常由原语完成。 所谓原语，一般是指由若干条指令组成的程序段，用来实现某个特定功能，在执行过程中不可被中断。
  */
 public class LockSupport {
     private LockSupport() {} // Cannot be instantiated.
@@ -332,6 +336,8 @@ public class LockSupport {
      * upon return.
      *
      * @param nanos the maximum number of nanoseconds to wait
+     *
+     * 由于线程调度目的，使当前线程进入等待时长，除非获得许可
      */
     public static void parkNanos(long nanos) {
         if (nanos > 0)

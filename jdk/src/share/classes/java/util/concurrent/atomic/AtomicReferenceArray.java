@@ -48,6 +48,8 @@ import sun.misc.Unsafe;
  * @since 1.5
  * @author Doug Lea
  * @param <E> The base class of elements held in this array
+ *
+ * 原子更新引用类型数组里的元素
  */
 public class AtomicReferenceArray<E> implements java.io.Serializable {
     private static final long serialVersionUID = -6209656149925076980L;
@@ -132,6 +134,8 @@ public class AtomicReferenceArray<E> implements java.io.Serializable {
 
     /**
      * Sets the element at position {@code i} to the given value.
+     *
+     * 将下标 i 的元素设置为给定值
      *
      * @param i the index
      * @param newValue the new value

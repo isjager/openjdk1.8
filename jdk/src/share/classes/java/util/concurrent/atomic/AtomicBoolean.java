@@ -46,6 +46,8 @@ import sun.misc.Unsafe;
  *
  * @since 1.5
  * @author Doug Lea
+ *
+ * 原子更新布尔值类型
  */
 public class AtomicBoolean implements java.io.Serializable {
     private static final long serialVersionUID = 4654671469794556979L;
@@ -94,6 +96,10 @@ public class AtomicBoolean implements java.io.Serializable {
      * @param update the new value
      * @return {@code true} if successful. False return indicates that
      * the actual value was not equal to the expected value.
+     *
+     * 先把布尔值转换成整型，再使用 compareAndSwapInt 进行 CAS。
+     *
+     * 更新 char、float、double 等，也可以用类似的思路来实现。
      */
     public final boolean compareAndSet(boolean expect, boolean update) {
         int e = expect ? 1 : 0;
