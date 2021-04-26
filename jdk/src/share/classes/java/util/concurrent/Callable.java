@@ -53,11 +53,15 @@ package java.util.concurrent;
  * @since 1.5
  * @author Doug Lea
  * @param <V> the result type of method {@code call}
+ *
+ * Callable 同样是任务，与 Runnable 接口的区别在于它接收泛型，同时它执行任务后带有返回内容
  */
 @FunctionalInterface
 public interface Callable<V> {
     /**
      * Computes a result, or throws an exception if unable to do so.
+     *
+     * 相对于 run() 方法，call() 方法带有返回值的
      *
      * @return computed result
      * @throws Exception if unable to compute a result

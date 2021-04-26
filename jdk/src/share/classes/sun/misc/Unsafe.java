@@ -88,6 +88,16 @@ import sun.reflect.Reflection;
  * Java 锁和同步器框架的核心类 AbstractQueuedSynchronizer，就是通过调用 LockSupport.park() 和
  * LockSupport.unpark() 实现线程的阻塞和唤醒的，而 LockSupport 的 park、unpark 方法实际是调用
  * Unsafe 的 park、unpark 方式来实现。
+ *
+ * 四、内存屏障
+ *
+ * 在 Java 8 中引入，用于定于内存屏障（也称内存栅栏、内存栅障、屏障指令等，是一类同步屏障指令，是 CPU 或
+ * 编译器在对内存随机访问的操作中的一个同步点，使得此点之前的所有读写操作都执行后才可以开始执行此点之后的操作），
+ * 避免代码重排序。
+ *
+ *    loadFence()
+ *    storeFence()
+ *    fullFence()
  */
 public final class Unsafe {
 
@@ -508,6 +518,8 @@ public final class Unsafe {
      * #addressSize}.
      *
      * @see #allocateMemory
+     *
+     * 从给定的内存地址获取本地指针。
      */
     public native long getAddress(long address);
 
@@ -520,6 +532,8 @@ public final class Unsafe {
      * determined by consulting {@link #addressSize}.
      *
      * @see #getAddress(long)
+     *
+     * 将本机指针存储到给定的内存地址中
      */
     public native void putAddress(long address, long x);
 
@@ -965,6 +979,9 @@ public final class Unsafe {
     /**
      * Atomically update Java variable to <tt>x</tt> if it is currently
      * holding <tt>expected</tt>.
+     *
+     * 将 Java 变量更新为 x 持有预期
+     *
      * @return <tt>true</tt> if successful
      */
     public final native boolean compareAndSwapInt(Object o, long offset,

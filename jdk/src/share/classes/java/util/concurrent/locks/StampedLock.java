@@ -187,6 +187,12 @@ import java.util.concurrent.locks.LockSupport;
  *
  * @since 1.8
  * @author Doug Lea
+ *
+ * StampedLock
+ *    Java 8 中引入了一种锁的新机制，可以看成是读写锁的一个改进版本，StampedLock 提供了一种乐观锁的实现，
+ *    这种乐观读锁类似于无锁的操作，完全不会阻塞写线程获取写锁，从而缓解读多写少时写线程 "饥饿" 现象。由于
+ *    StampedLock 提供的乐观读锁不会阻塞写线程获取写锁，当线程共享变量从主内存 load 到线程工作内存时，会
+ *    存在数据不一致问题。所以当使用 StampedLock 的乐观读锁时，要遵循一定的模式来确保数据的一致性。
  */
 public class StampedLock implements java.io.Serializable {
     /*
@@ -526,7 +532,7 @@ public class StampedLock implements java.io.Serializable {
      * since issuance of the given stamp; else false
      */
     public boolean validate(long stamp) {
-        U.loadFence();
+        U.loadFence(); // load 内存屏障
         return (stamp & SBITS) == (state & SBITS);
     }
 

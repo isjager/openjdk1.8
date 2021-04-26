@@ -51,6 +51,10 @@ package java.lang;
  * @see     java.lang.Thread
  * @see     java.util.concurrent.Callable
  * @since   JDK1.0
+ *
+ * 线程的实现方式：Runnable、Thread、Callable
+ *
+ * 实现 Runnable 接口的类将被 Thread 执行，表示一个基本的任务
  */
 @FunctionalInterface
 public interface Runnable {
@@ -64,6 +68,8 @@ public interface Runnable {
      * take any action whatsoever.
      *
      * @see     java.lang.Thread#run()
+     *
+     * run() 方法就是它所有的内容，就是实际执行的任务
      */
     public abstract void run();
 }

@@ -117,6 +117,8 @@ import java.util.*;
  *
  * @since 1.5
  * @author Doug Lea
+ *
+ * 定时线程池
  */
 public class ScheduledThreadPoolExecutor
         extends ThreadPoolExecutor

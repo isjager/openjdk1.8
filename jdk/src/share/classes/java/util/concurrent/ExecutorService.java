@@ -152,6 +152,8 @@ public interface ExecutorService extends Executor {
      *         java.lang.RuntimePermission}{@code ("modifyThread")},
      *         or the security manager's {@code checkAccess} method
      *         denies access.
+     *
+     * 在完成已提交的任务后封闭办事，不再接管新任务。
      */
     void shutdown();
 
@@ -177,6 +179,8 @@ public interface ExecutorService extends Executor {
      *         java.lang.RuntimePermission}{@code ("modifyThread")},
      *         or the security manager's {@code checkAccess} method
      *         denies access.
+     *
+     * 停止所有正在履行的任务，并封闭办事
      */
     List<Runnable> shutdownNow();
 
@@ -184,6 +188,8 @@ public interface ExecutorService extends Executor {
      * Returns {@code true} if this executor has been shut down.
      *
      * @return {@code true} if this executor has been shut down
+     *
+     * 测试是否该 ExecutorService 已被关闭。
      */
     boolean isShutdown();
 
@@ -193,6 +199,8 @@ public interface ExecutorService extends Executor {
      * either {@code shutdown} or {@code shutdownNow} was called first.
      *
      * @return {@code true} if all tasks have completed following shut down
+     *
+     * 验证是否所有的任务都履行完毕，否则先调用 shutdown 或 shutdownNow
      */
     boolean isTerminated();
 
@@ -232,6 +240,8 @@ public interface ExecutorService extends Executor {
      * @throws RejectedExecutionException if the task cannot be
      *         scheduled for execution
      * @throws NullPointerException if the task is null
+     *
+     * 可用来提交 Callable 或 Runnabele 任务，并返回代表此任务的 Future 对象。
      */
     <T> Future<T> submit(Callable<T> task);
 
@@ -247,6 +257,8 @@ public interface ExecutorService extends Executor {
      * @throws RejectedExecutionException if the task cannot be
      *         scheduled for execution
      * @throws NullPointerException if the task is null
+     *
+     * 可用来提交 Callable 或 Runnabele 任务，并返回代表此任务的 Future 对象。
      */
     <T> Future<T> submit(Runnable task, T result);
 

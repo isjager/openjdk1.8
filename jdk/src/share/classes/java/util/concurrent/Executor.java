@@ -124,6 +124,10 @@ package java.util.concurrent;
  *
  * @since 1.5
  * @author Doug Lea
+ *
+ * Executor 接口是线程池框架中最基础的部分。
+ *
+ * 定义了一个用于执行 Runnable 的 execute() 方法。
  */
 public interface Executor {
 
@@ -131,6 +135,8 @@ public interface Executor {
      * Executes the given command at some time in the future.  The command
      * may execute in a new thread, in a pooled thread, or in the calling
      * thread, at the discretion of the {@code Executor} implementation.
+     *
+     * 履行 Runnable 类型的任务
      *
      * @param command the runnable task
      * @throws RejectedExecutionException if this task cannot be

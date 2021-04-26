@@ -87,6 +87,15 @@ import java.util.function.UnaryOperator;
  * @since 1.5
  * @author Doug Lea
  * @param <E> the type of elements held in this collection
+ *
+ * CopyOnWrite 机制
+ *
+ * 核心思想：读写分离，空间换时间，避免为保证并发安全导致的激烈的锁竞争。
+ * 关键点：
+ *    1、CopyOnWrite 适合读多写少的情况，最大程度的提高读的效率；
+ *    2、CopyOnWrite 是最终一致性，在写的过程中，原有的读的数据是不会发生更新的，只有读才能读到最新数据；
+ *    3、如何使其他线程能够及时读到新的数据，需要使用 volatile 变量；
+ *    4、写的时候不能并发写，需要对写操作进行加锁；
  */
 public class CopyOnWriteArrayList<E>
     implements List<E>, RandomAccess, Cloneable, java.io.Serializable {
@@ -390,6 +399,8 @@ public class CopyOnWriteArrayList<E>
     /**
      * {@inheritDoc}
      *
+     * 读 API
+     *
      * @throws IndexOutOfBoundsException {@inheritDoc}
      */
     public E get(int index) {
@@ -427,6 +438,8 @@ public class CopyOnWriteArrayList<E>
     /**
      * Appends the specified element to the end of this list.
      *
+     * 添加元素 API
+     *
      * @param e element to be appended to this list
      * @return {@code true} (as specified by {@link Collection#add})
      */
@@ -437,7 +450,9 @@ public class CopyOnWriteArrayList<E>
             Object[] elements = getArray();
             int len = elements.length;
             Object[] newElements = Arrays.copyOf(elements, len + 1);
+            // 往副本里写入
             newElements[len] = e;
+            // 腹痛替换原本，成为新的原本
             setArray(newElements);
             return true;
         } finally {
