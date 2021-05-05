@@ -873,17 +873,26 @@ public class ScheduledThreadPoolExecutor
         /**
          * Sifts element added at bottom up to its heap-ordered spot.
          * Call only when holding lock.
+         *
+         * 此处代码，就是循环的根据 key 节点与它的父节点来判断，如果 key 节点的执行时间小于父节点，
+         * 则将两个节点交换，使执行时间靠前的节点排列在队列的前面。
          */
         private void siftUp(int k, RunnableScheduledFuture<?> key) {
+            // 找到父节点的索引
             while (k > 0) {
+                // 获取父节点
                 int parent = (k - 1) >>> 1;
                 RunnableScheduledFuture<?> e = queue[parent];
+                // 如果 key 节点的执行时间大于父节点的执行时间，不需要在排序了
                 if (key.compareTo(e) >= 0)
                     break;
+                // 如果 key.compareTo(e) < 0，说明 key 节点的执行时间小于父节点的执行时间，需要把父节点移到后面
                 queue[k] = e;
                 setIndex(e, k);
+                // 设置索引为 k
                 k = parent;
             }
+            // key 设置为排序后的位置中
             queue[k] = key;
             setIndex(key, k);
         }
@@ -1003,24 +1012,43 @@ public class ScheduledThreadPoolExecutor
         }
 
         public boolean offer(Runnable x) {
+            // 参数校验
             if (x == null)
                 throw new NullPointerException();
             RunnableScheduledFuture<?> e = (RunnableScheduledFuture<?>)x;
             final ReentrantLock lock = this.lock;
             lock.lock();
             try {
+                // 查看当前元素数量，如果大于队列长度则进行扩容
                 int i = size;
                 if (i >= queue.length)
+                    // 扩容
                     grow();
+                // 元素数量加 1
                 size = i + 1;
                 if (i == 0) {
                     queue[0] = e;
+                    // 记录索引
                     setIndex(e, 0);
                 } else {
+                    /*
+                     * 把任务加入堆中，并调整堆结构，这里就会根据任务的触发时间排列，
+                     * 把需要最早执行的任务放在前面
+                     */
                     siftUp(i, e);
                 }
+                /*
+                 * 如果新加入的元素就是队列头，这里有两种情况：
+                 * 1、这是用户提交的第一个任务
+                 * 2、新任务进行堆调整后，排在队列头
+                 */
                 if (queue[0] == e) {
+                    /*
+                     * leader 设置为 null，为了使在 task() 方法中的线程在通过 available.signal()；
+                     * 后会执行 available.awaitNanos(delay)
+                     */
                     leader = null;
+                    // 加入元素以后，唤醒 worker 线程
                     available.signal();
                 }
             } finally {
@@ -1080,18 +1108,23 @@ public class ScheduledThreadPoolExecutor
                     if (first == null)
                         available.await();
                     else {
+                        // 计算当前时间到执行时间的间隔时间
                         long delay = first.getDelay(NANOSECONDS);
                         if (delay <= 0)
                             return finishPoll(first);
                         first = null; // don't retain ref while waiting
+                        // leader 不为空，阻塞线程
                         if (leader != null)
                             available.await();
                         else {
+                            // leader 为空，则把 leader 设置为当前线程
                             Thread thisThread = Thread.currentThread();
                             leader = thisThread;
                             try {
+                                // 阻塞到执行时间
                                 available.awaitNanos(delay);
                             } finally {
+                                // 设置 leader = null，让其他线程执行 available.awaitNanos(delay)
                                 if (leader == thisThread)
                                     leader = null;
                             }
@@ -1099,6 +1132,11 @@ public class ScheduledThreadPoolExecutor
                     }
                 }
             } finally {
+                /*
+                 * 如果 leader 不为空，则说明 leader 的线程正在执行 available.awaitNanos(delay);
+                 *
+                 * 如果 queue[0] == null，说明队列为空
+                 */
                 if (leader == null && queue[0] != null)
                     available.signal();
                 lock.unlock();
