@@ -179,13 +179,32 @@ public class ScheduledThreadPoolExecutor
         return System.nanoTime();
     }
 
+    /**
+     * ScheduledFutureTask 类型的任务，是线程池调度任务的最小单位，有三种提交任务的方式：
+     * 1、schedule
+     * 2、scheduleAtFixedRate
+     * 3、scheduleWithFixedDelay
+     *
+     * 采用 DelayQueue 存储等待的任务：
+     * 1、DelayQueue 内部封装了一个 PriorityQueue，它会根据 time 的先后时间排序，若 time 时间
+     * 相同则根据 sequenceNumber 排序；
+     * 2、DelayQueue 也是一个无界队列；
+     */
     private class ScheduledFutureTask<V>
             extends FutureTask<V> implements RunnableScheduledFuture<V> {
 
-        /** Sequence number to break ties FIFO */
+        /**
+         * Sequence number to break ties FIFO
+         *
+         * 任务的序号
+         */
         private final long sequenceNumber;
 
-        /** The time the task is enabled to execute in nanoTime units */
+        /**
+         * The time the task is enabled to execute in nanoTime units
+         *
+         * 任务开始的时间
+         */
         private long time;
 
         /**
@@ -193,6 +212,8 @@ public class ScheduledThreadPoolExecutor
          * value indicates fixed-rate execution.  A negative value
          * indicates fixed-delay execution.  A value of 0 indicates a
          * non-repeating task.
+         *
+         * 任务执行的时间间隔
          */
         private final long period;
 
@@ -238,16 +259,27 @@ public class ScheduledThreadPoolExecutor
             return unit.convert(time - now(), NANOSECONDS);
         }
 
+        /**
+         * 排序算法：
+         * DelayQueue 内部封装了一个 PriorityQueue，它会根据 time 的先后时间排序，
+         * 若 time 时间相同，则根据 sequenceNumber 排序；
+         */
         public int compareTo(Delayed other) {
             if (other == this) // compare zero if same object
                 return 0;
             if (other instanceof ScheduledFutureTask) {
                 ScheduledFutureTask<?> x = (ScheduledFutureTask<?>)other;
+                // 1、先按照 time 排序，time 小的排在前面，time 大的排在后面；
                 long diff = time - x.time;
                 if (diff < 0)
                     return -1;
                 else if (diff > 0)
                     return 1;
+                /*
+                 * 2、如果 time 相同，按照 sequenceNumber 排序，sequenceNumber 小的排在前面
+                 * sequenceNumber 大的排在后面，换句话说，如果两个 task 的执行时间相同，优先执行
+                 * 先提交的 task。
+                 */
                 else if (sequenceNumber < x.sequenceNumber)
                     return -1;
                 else
@@ -286,15 +318,28 @@ public class ScheduledThreadPoolExecutor
 
         /**
          * Overrides FutureTask version so as to reset/requeue if periodic.
+         *
+         * run() 方法是调度 task 的核心，task 的执行实际上是 run() 方法的执行。
          */
         public void run() {
             boolean periodic = isPeriodic();
+            // 1、如果当前线程池已经不支持执行任务，则取消该任务，然后直接返回，否则执行步骤2；
             if (!canRunInCurrentRunState(periodic))
                 cancel(false);
+            /*
+             * 2、如果不是周期性任务，调用 FutureTask 中的 run() 方法，会设置执行结果，
+             * 然后直接返回，否则执行步骤3；
+             */
             else if (!periodic)
                 ScheduledFutureTask.super.run();
+            /*
+             * 3、如果是周期性任务，调用 FutureTask 中的 runAndReset() 方法执行，
+             * 不会设置执行结果，然后直接返回，否则执行步骤4和步骤5；
+             */
             else if (ScheduledFutureTask.super.runAndReset()) {
+                // 4、计算下次执行该任务的具体时间
                 setNextRunTime();
+                // 5、重复执行任务
                 reExecutePeriodic(outerTask);
             }
         }
@@ -321,18 +366,30 @@ public class ScheduledThreadPoolExecutor
      * is being added, cancel and remove it if required by state and
      * run-after-shutdown parameters.
      *
+     * delayedExecute：任务提交方法
+     *
      * @param task the task
      */
     private void delayedExecute(RunnableScheduledFuture<?> task) {
+        // 如果线程池已经关闭，则使用拒绝策略把提交任务拒绝掉
         if (isShutdown())
             reject(task);
         else {
+            /*
+             * 与 ThreadPoolExecutor 不同，这里直接把任务加入延迟队列，
+             * 用的是 DelayedWorkQueue
+             */
             super.getQueue().add(task);
+            // 如果当前状态无法执行任务，则取消
             if (isShutdown() &&
                 !canRunInCurrentRunState(task.isPeriodic()) &&
                 remove(task))
                 task.cancel(false);
             else
+                /*
+                 * 这里增加一个 worker 线程，避免提交的任务没有 worker 去执行，
+                 * 原因就是该类没有像 ThreadPoolExecutor 一样，worker 满了才放入队列
+                 */
                 ensurePrestart();
         }
     }
@@ -340,6 +397,10 @@ public class ScheduledThreadPoolExecutor
     /**
      * Requeues a periodic task unless current run state precludes it.
      * Same idea as delayedExecute except drops task rather than rejecting.
+     *
+     * 该方法和 delayedExcetue 方法类似，不同的是：
+     * 1、由于调用 reExecutePeriodic() 方法时已经执行过一次周期性任务了，所以不会 reject 当前任务；
+     * 2、传入的任务一定时周期性任务；
      *
      * @param task the task
      */
@@ -523,15 +584,24 @@ public class ScheduledThreadPoolExecutor
     /**
      * @throws RejectedExecutionException {@inheritDoc}
      * @throws NullPointerException       {@inheritDoc}
+     *
+     * 线程池任务的提交：
+     * 首先时 schedule() 方法，该方法是指任务在指定延迟时间到达后触发，只会执行一次。
      */
     public ScheduledFuture<?> schedule(Runnable command,
                                        long delay,
                                        TimeUnit unit) {
+        // 参数校验
         if (command == null || unit == null)
             throw new NullPointerException();
+        /*
+         * 这里是一个嵌套结构，首先把用户提交的任务包装成 ScheduledFutureTask 对象，
+         * 然后在调用 decorateTask() 进行包装，该方法是留给用户去扩展的，默认是个空方法。
+         */
         RunnableScheduledFuture<?> t = decorateTask(command,
             new ScheduledFutureTask<Void>(command, null,
                                           triggerTime(delay, unit)));
+        // 包装好任务以后，就进行提交了
         delayedExecute(t);
         return t;
     }
@@ -807,6 +877,29 @@ public class ScheduledThreadPoolExecutor
      * Specialized delay queue. To mesh with TPE declarations, this
      * class must be declared as a BlockingQueue<Runnable> even though
      * it can only hold RunnableScheduledFutures.
+     *
+     * 专门的延迟队列。为了 TPE 声明相吻合，这即使该类只能容纳 RunnableScheduledFutures，
+     * 也必须将其声明为 BlockingQueue<Runnable>
+     *
+     * ScheduledThreadPoolExecutor 只所以要自己实现阻塞的工作队列，是因为 ScheduledThreadPoolExecutor 要求的工作队列有些特殊。
+     *
+     * DelayedWorkQueue 是一个基于堆的数据结构，类似于 DelayQueue 和 PriorityQueue。
+     * 在执行定时任务的时候，每个任务的执行时间都不同，所以 DelayedWorkQueue 的工作就是
+     * 按照执行时间的升序来排序，执行时间距离当前时间越近的任务在队列的前面。
+     * （注意：这里的顺序并不是绝对的，堆中的排序只保证了子节点的下次执行时间要比父节点的下次执行
+     * 时间要大，而叶子节点之间并不一定是顺序的）
+     *
+     * 堆结构的特性：
+     * 假设，索引值从0开始，子节点的索引值为k，父节点的索引值为p，则：
+     * 1、一个节点的左子节点的索引为：k = p * 2 + 1；
+     * 2、一个节点的右子节点的索引为：k = (p + 1) * 2；
+     * 3、一个节点的父节点的索引为：p = (k -1)/2
+     *
+     * 为什么要使用 DelayedWorkQueue 呢？
+     *     定时任务执行时需要取出最近要执行的任务，所以任务在队列中每次出队时一定要是当前队列中
+     * 执行时间最靠前的，所以自然要使用优先级队列。
+     *      DelayedWorkQueue 是一个优先级队列，它可以保证每次出队的任务都是当前队列中执行时间
+     * 最靠前的，由于它是基于堆结构的队列，堆结构在执行插入和删除操作时的最坏时间复杂度是 O(logN)。
      */
     static class DelayedWorkQueue extends AbstractQueue<Runnable>
         implements BlockingQueue<Runnable> {
@@ -834,7 +927,9 @@ public class ScheduledThreadPoolExecutor
          * identified by heapIndex.
          */
 
+        // 队列初始容量
         private static final int INITIAL_CAPACITY = 16;
+        // 根据初始容量创建 RunnableScheduledFuture 类型的数组
         private RunnableScheduledFuture<?>[] queue =
             new RunnableScheduledFuture<?>[INITIAL_CAPACITY];
         private final ReentrantLock lock = new ReentrantLock();
@@ -855,12 +950,25 @@ public class ScheduledThreadPoolExecutor
          * thread, but not necessarily the current leader, is
          * signalled.  So waiting threads must be prepared to acquire
          * and lose leadership while waiting.
+         *
+         * leader 线程
          */
         private Thread leader = null;
 
         /**
          * Condition signalled when a newer task becomes available at the
          * head of the queue or a new thread may need to become leader.
+         *
+         * 当较新的任务在队列的头部可用时，或者新线程可能需要成为 leader，则通过该条件发出信号
+         *
+         * leader 是 Leader-Follower 模式的变体，用于减少不必要的定时等待。什么意思呢？
+         * 对于多线程的模型来说：
+         *     1、所有线程会有三种身份中的一种：leader 和 follower，以及一个干活中的状态：proccesser。
+         * 它的基本原则就是，永远最多只有一个 leader。而所有 follower 都在等待成为 leader。
+         *     2、线程池启动时会自动产生一个 Leader 负责等待网络 IO 事件，当有一个事件产生时，Leader 线程
+         * 首先通知一个 Follower 线程将其提拔为新 Leader，然后自己就去干活了，去处理这个网络事件，处理完毕
+         * 后加入 Follower 线程等待队列，等待下次成为 Leader。这种方法可以增强 CPU 高速缓存相似性，及消除
+         * 动态内存分配和线程间的数据交换。
          */
         private final Condition available = lock.newCondition();
 
@@ -902,21 +1010,35 @@ public class ScheduledThreadPoolExecutor
         /**
          * Sifts element added at top down to its heap-ordered spot.
          * Call only when holding lock.
+         *
+         * siftDown() 方法，使堆从 k 开始向下调整
+         *
+         * siftDown() 方法执行时包含两种情况：
+         * 1、一种是没有子节点，
+         * 2、一种是有子节点（根据 half 判断）
          */
         private void siftDown(int k, RunnableScheduledFuture<?> key) {
+            // 根据二叉树的特性，数组长度除以2，表示取有子节点的索引
             int half = size >>> 1;
+            // 判断索引为 k 的节点是否有子节点
             while (k < half) {
+                // 左子节点的索引
                 int child = (k << 1) + 1;
                 RunnableScheduledFuture<?> c = queue[child];
+                // 右子节点的索引
                 int right = child + 1;
+                // 如果有右子节点并且左子节点的时间间隔大于右子节点，取时间间隔最小的节点
                 if (right < size && c.compareTo(queue[right]) > 0)
                     c = queue[child = right];
+                // 如果 key 的时间间隔小于等于 c 的时间间隔，跳出循环
                 if (key.compareTo(c) <= 0)
                     break;
+                // 设置要移除索引的节点为其子节点
                 queue[k] = c;
                 setIndex(c, k);
                 k = child;
             }
+            //将 key 放入索引为 k 的位置
             queue[k] = key;
             setIndex(key, k);
         }
@@ -975,7 +1097,13 @@ public class ScheduledThreadPoolExecutor
                 RunnableScheduledFuture<?> replacement = queue[s];
                 queue[s] = null;
                 if (s != i) {
+                    // 从 i 开始向下调整
                     siftDown(i, replacement);
+                    /*
+                     * 如果 queue[i] == replacement，说明 i 是叶子节点
+                     * 如果是这种情况，不能保证子节点的下次执行时间比父节点的大
+                     * 这时需要进行一次向上调整
+                     */
                     if (queue[i] == replacement)
                         siftUp(i, replacement);
                 }
@@ -1075,18 +1203,29 @@ public class ScheduledThreadPoolExecutor
          * Performs common bookkeeping for poll and take: Replaces
          * first element with last and sifts it down.  Call only when
          * holding lock.
+         *
+         * 当调用了 take() 或 poll() 方法能够获取任务时，会调用该方法进行返回
+         *
          * @param f the task to remove and return
          */
         private RunnableScheduledFuture<?> finishPoll(RunnableScheduledFuture<?> f) {
+            // 数组长度-1
             int s = --size;
+            // 取出最后一个节点
             RunnableScheduledFuture<?> x = queue[s];
             queue[s] = null;
+            // 长度不为0，则从这一个元素开始排序，目的是要把最后一个节点放到合适的位置上
             if (s != 0)
                 siftDown(0, x);
             setIndex(f, -1);
             return f;
         }
 
+        /**
+         * poll() 方法，也 take() 方法类似，这里要提供超时功能：
+         *
+         * @return
+         */
         public RunnableScheduledFuture<?> poll() {
             final ReentrantLock lock = this.lock;
             lock.lock();
@@ -1101,6 +1240,29 @@ public class ScheduledThreadPoolExecutor
             }
         }
 
+        /**
+         * take() 方法是什么时候调用呢？在 ThreadPoolExecutor 中，介绍了 getTask() 方法，
+         * 工作线程会循环地从 workQueue 中取任务。但定时任务却不同，因为如果一旦 getTask() 方法
+         * 取出了任务就开始执行了，而这时可能还没有到执行的时间，所以 take() 方法中，要保证只有在
+         * 指定的执行时间的时候任务才可以被取走。
+         *
+         * leader 的作用，这里的 leader 是为了减少不必要的定时等待，当一个线程成为 leader 时，它
+         * 只等待下一个节点的时间间隔，但其他线程无限期等待。leader 线程必须在 take() 或 poll()
+         * 返回之前 signal 其他线程，除非其他线程成为了 leader。
+         *
+         * 例：
+         * 如果没有 leader，那么在执行 take() 方法时，都要执行 available.awaitNanos(delay); 假设
+         * 当前线程执行了该段代码，这时还没有 signal，第二个线程也执行了该段代码，则第二个线程也要被阻塞。
+         * 多个这时执行该段代码是没有作用的，因为只能有一个线程会 take() 方法中返回 queue[0]（因为有 lock），
+         * 其他线程这时再返回 for 循环执行时取 queue[0]，已经不是之前的 queue[0] 了，然后又要继续阻塞。
+         *
+         * 所以，为了不让多个线程频繁的做无用的定时等待，这里增加了 leader，如果 leader 不为空，则说明队列
+         * 中第一个节点已经在等待出队，这时其他的线程会一直阻塞，减少了无用的阻塞（注意，finally 中调用了
+         * signal() 来唤醒一个线程，而不是 signalAll()）
+         *
+         * @return
+         * @throws InterruptedException
+         */
         public RunnableScheduledFuture<?> take() throws InterruptedException {
             final ReentrantLock lock = this.lock;
             lock.lockInterruptibly();
@@ -1140,6 +1302,7 @@ public class ScheduledThreadPoolExecutor
                  * 如果 queue[0] == null，说明队列为空
                  */
                 if (leader == null && queue[0] != null)
+                    //  Wakes up one waiting thread.
                     available.signal();
                 lock.unlock();
             }

@@ -497,6 +497,8 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
      * 3、SynchornousQueue：一个存储元素的阻塞队列，每个插入操作必须等到另一个线程调用移除操作，否则插入操作一直
      *                      处于阻塞状态，吞吐量通常高于 LinkedBlockingQueue；
      * 4、priorityBlockingQueue：具有优先级的无界阻塞队列；
+     *
+     * BlockingQueue 接口被 DelayQueue 实现，DelayQueue 内部封装了一个 PriorityQueue，具有优先级的无界队列
      */
     private final BlockingQueue<Runnable> workQueue;
 
