@@ -693,6 +693,8 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
      * true}.
      *
      * @return {@code this}, to simplify usage
+     *
+     * fork() 方法：做的工作只有一件事，既是把任务推入当前工作线程的工作队列里
      */
     public final ForkJoinTask<V> fork() {
         Thread t;
@@ -711,6 +713,22 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
      * interrupts of the calling thread do <em>not</em> cause the
      * method to abruptly return by throwing {@code
      * InterruptedException}.
+     *
+     * join() 方法的工作复杂得多，也是 join() 可以使得线程免于被阻塞的原因 ———— 不像同名的 Thread.join()。
+     *
+     * 1、检查调用 join() 的线程是否是 ForkJoinThread 线程。如果不是（例如 main 线程），则阻塞当前线程，
+     * 等待任务完成。如果是，则不阻塞。
+     *
+     * 2、查看任务的完成状态，如果已经完成，直接返回结果。
+     *
+     * 3、如果任务尚未完成，但处于自己的工作队列内，则完成它。
+     *
+     * 4、如果任务已经被其他的工作线程偷走，则窃取这个小偷的工作队列内的任务（以 FIFO 方式）执行，以期帮助它
+     * 早日完成 join 的任务
+     *
+     * 5、如果偷走任务的小偷也已经把自己的任务全部做完，正在等待需要 join 的任务时，则找到小偷的小偷，帮助它完成它的任务。
+     *
+     * 6、递归地执行第5步。
      *
      * @return the computed result
      */
@@ -899,6 +917,10 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
     /**
      * Returns {@code true} if this task threw an exception or was cancelled.
      *
+     * ForkJoinTask 在执行的时候可能会抛出异常，但是我们没办法在主线程里直接捕获异常，
+     * 所以 ForkJoinTask 提供了 isCompletedAbnormally() 方法来检查任务是否已经抛出
+     * 异常或已经被取消了，并且可以通过 ForkJoinTask 的 getException() 方法获取异常。
+     *
      * @return {@code true} if this task threw an exception or was cancelled
      */
     public final boolean isCompletedAbnormally() {
@@ -920,6 +942,9 @@ public abstract class ForkJoinTask<V> implements Future<V>, Serializable {
      * Returns the exception thrown by the base computation, or a
      * {@code CancellationException} if cancelled, or {@code null} if
      * none or if the method has not yet completed.
+     *
+     * getException() 方法返回 Throwable 对象，如果任务被取消了，则返回
+     * CancellationException。如果任务没有完成或者没有抛出异常则返回 null。
      *
      * @return the exception, or {@code null} if none
      */
