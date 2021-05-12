@@ -78,6 +78,8 @@ import java.util.Spliterator;
  * @since 1.5
  * @author Doug Lea
  * @param <E> the type of elements held in this collection
+ *
+ * 基于数组形式的队列，通过加锁的方式，来保证多线程情况下数据的安全；
  */
 public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         implements BlockingQueue<E>, java.io.Serializable {

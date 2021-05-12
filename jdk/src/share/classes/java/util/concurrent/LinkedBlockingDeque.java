@@ -70,6 +70,8 @@ import java.util.function.Consumer;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * 基于链表形式的队列，也通过加锁的方式，来保证多线程情况下数据的安全；
+ *
  * @since 1.6
  * @author  Doug Lea
  * @param <E> the type of elements held in this collection

@@ -84,6 +84,9 @@ import java.util.function.Consumer;
  * <a href="{@docRoot}/../technotes/guides/collections/index.html">
  * Java Collections Framework</a>.
  *
+ * 基于链表形式的队列，通过compare and swap(简称CAS)协议的方式，
+ * 来保证多线程情况下数据的安全，不加锁，主要使用了Java中的sun.misc.Unsafe类来实现；
+ *
  * @since 1.7
  * @author Doug Lea
  * @author Martin Buchholz
